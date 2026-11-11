@@ -231,10 +231,13 @@ amber) and unit; buttons GEN, VARY, UNDO, BANK, MODE and MIDI (back to the
 MIDI PLAYGROUND page). The serial protocol gains a text form `name=text` for
 labels, `ps_*` int names, the missing `uic_t1Arc3/4/5Tempo` cases, and the
 page answers with `{"get":"ps_…"}` lines the service maps to Link actions.
-Design mock: https://claude.ai/artifact/NME21KU2AU5ZoqhwvSFodA. It compiled on
-the MacBook (92 % of flash); binaries and flashing notes are in its
-`firmware/`. The ESP32 was on nobody's USB port, so it still runs V3, which
-answers the new names with `err unknown` and is otherwise unaffected.
+Design mock: https://claude.ai/artifact/NME21KU2AU5ZoqhwvSFodA. Compiled on
+the MacBook (92 % of flash) and **flashed to the box on 11 Nov 2026** from the
+MacBook's USB (`/dev/cu.usbserial-1440`, upload at 115200: 921600 drops the
+CH340). From the Pi every `ps_*` command and text label was acknowledged, and
+the service brings the page up when PatchSYS comes online. The page's look
+and touch on the real panel were not seen by anyone yet. Binaries and
+flashing notes are in the sketch's `firmware/`.
 
 ## Where it paused and the next steps ChatGPT and Stephen had agreed
 1. Fix the garbled press-event prints in `encoders_test.py` (one line per event, line-buffered stdout), confirm Arc1 presses.
