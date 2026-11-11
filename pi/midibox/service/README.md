@@ -32,7 +32,7 @@ systemd unit for later (`sudo cp service/midibox.service /etc/systemd/system/
 | SuperCore turn, DEPTH mode (amber ring) | `set_depth` action, 0–100 | | |
 | Arc touched on screen | same control as its encoder | | |
 | Pitch / mod wheels | | pitch and mod bars | MIDI pitch bend / CC1 on "Midibox Controls", wheel pixels |
-| Faders 1 / 2 | optional (`"targets": [{"macro": "oscillator_mix"}]`) | | MIDI CC 7 / CC 74 |
+| Faders 1 / 2 | Balance / Movement (`set_parameter`), configurable in `faders.targets` | arcs when bank B is up | MIDI CC 7 / CC 74 as well |
 
 PatchSYS's confirmed values come back over the Link and move the arcs, so the
 screen follows the app after a Generate or an Undo. A value we are turning is
@@ -53,8 +53,8 @@ Arc1 button is free again.
 
 ## PatchSYS side
 
-Nothing to install. PatchSYS Development starts its Link on port 39276 when it
-opens (`PATCHSYS_REMOTE_LINK` not set to 0). The service connects to
+Nothing to install. PatchSYS Surface (the current app; Development too) starts
+its Link on port 39276 when it opens (`PATCHSYS_REMOTE_LINK` not set to 0). The service connects to
 `Stephens-Mac-mini-3068.local`; change `link.host` in `config.json` for another
 Mac. The target must be ONLINE in PatchSYS (a synth loaded, not busy) before
 writes are accepted; until then the service keeps the newest knob values and

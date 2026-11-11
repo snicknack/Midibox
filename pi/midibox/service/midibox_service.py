@@ -434,9 +434,12 @@ class Service:
     def _fader(self, index, value01, value7):
         targets = self.cfg["faders"].get("targets", [])
         target = targets[index] if index < len(targets) else {}
-        if "macro" in target and target["macro"] in PARAMETER_IDS:
-            self._write_control(target["macro"], value01, len(self.arc_names))  # no arc to mirror
-        elif self.midi is not None:
+        macro = target.get("macro")
+        if macro in PARAMETER_IDS:
+            ids = self.current_ids()
+            arc = ids.index(macro) if macro in ids else len(self.arc_names)  # mirror an arc only if it is on screen
+            self._write_control(macro, value01, arc)
+        if self.midi is not None and ("cc" in target or macro not in PARAMETER_IDS):
             self.midi.cc(int(target.get("cc", 7 if index == 0 else 74)), value7)
 
     # -- from PatchSYS --------------------------------------------------------------------------

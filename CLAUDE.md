@@ -208,8 +208,11 @@ controller. Run it from `~/midibox` with `sudo python3 -m service.midibox_servic
   Arc1 cycles the mode until the SuperCore's own switch (P14) is proven, after
   which `press_pin: 14` moves the roles onto it and a long press requests a
   VARIATION.
-- Wheels stay MIDI pitch bend / CC1 (plus bars and pixels); faders are MIDI
-  CC 7 / 74 unless configured onto a control.
+- Wheels stay MIDI pitch bend / CC1 (plus bars and pixels); faders write
+  Balance and Movement and also send MIDI CC 7 / 74 (`faders.targets`).
+- The app to run on the Mac is **PatchSYS Surface** (`/Applications/PatchSYS
+  Surface.app`, `run_patchsys_surface.py`, capture mode with the Surface shell);
+  Development works too, but Surface is the newer shell Stephen uses.
 - Both LED strips run from one `rpi_ws281x` instance (two channels), which is
   what lets the ring and the wheel pixels live in one process.
 

@@ -60,7 +60,7 @@
     "ports": ["/dev/ttyAMA2", "/dev/ttyAMA3"],
     "cal_path": "config/calibration.json",
     "rate_hz": 250,
-    "targets": [{"cc": 7}, {"cc": 74}]
+    "targets": [{"macro": "oscillator_mix", "cc": 7}, {"macro": "movement", "cc": 74}]
   },
   "esp": {"enabled": true, "port": "/dev/serial0", "baud": 115200},
   "midi": {"enabled": true, "port_name": "Midibox Controls", "channel": 1}
