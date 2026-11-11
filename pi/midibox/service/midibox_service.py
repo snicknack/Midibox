@@ -38,6 +38,13 @@ from service.link_client import PARAMETER_IDS, PARAMETER_NAMES, PatchSysLink  # 
 
 LOGGER = logging.getLogger("midibox")
 
+# Names that fit under a 64 px arc on the screen; PatchSYS's full names stay in the log.
+SCREEN_NAMES = {
+    "oscillator_mix": "BALANCE", "brightness": "CUTOFF", "bite": "RESO",
+    "env_amount": "ENV AMT", "filter_attack": "ATTACK", "filter_release": "RELEASE",
+    "movement": "MOVE", "movement_speed": "SPEED",
+}
+
 
 class Service:
     def __init__(self, config, *, use_hw=True, use_link=True):
@@ -326,7 +333,7 @@ class Service:
         for index, parameter_id in enumerate(self.current_ids()):
             if index >= len(self.arc_names):
                 break
-            self.esp.send_text(f"ps_lbl{index + 1}", PARAMETER_NAMES[parameter_id].upper())
+            self.esp.send_text(f"ps_lbl{index + 1}", SCREEN_NAMES.get(parameter_id, PARAMETER_NAMES[parameter_id].upper()))
             value = self.requested.get(parameter_id)
             if value is None and self.link is not None:
                 value = self.link.values.get(parameter_id)
