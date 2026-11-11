@@ -1,0 +1,39 @@
+01	ADC integration with Pico	68e12d99-2480-832f-a712-d6ce782fdd43
+02	Midibox PM	68db9cda-c6b0-8323-877d-7912bed83cf2
+03	ESP32 version selection	68fea581-93fc-8330-9e22-8d4980ee7fdc
+04	Colour palette reference	68ffc21c-4c48-832b-b308-f9fb1ec4f8f2
+05	ESP32 setup guide	68e9ffd9-8568-832e-a500-441ec8883cb2
+06	ESP32 to PI Serial Integration	68ff7cf4-6220-8332-87a2-c676d53550ec
+07	TFT screen type gui	68e7fa68-8ff0-832c-85cd-108b87e34956
+08	SX1509 driver discussion	6909f3e2-8f1c-8327-9564-6ca872e450ab
+09	Behringer infinium x1 faders	68e7b38b-0a38-832e-b3d0-741cc61cbe9a
+10	New chat (faceplate overlay LEDs)	690c55fd-013c-832c-9429-9861e00b2567
+11	Pi4 replacement options	690c6084-936c-832a-b5c5-bad80cab2f8b
+12	Encoder switch placement	690df441-a730-832f-b610-f2201e5d6ccd
+13	DRV2605L dual LRA support	690ca538-d3c0-8330-a70d-ab01cc7ac432
+14	Unreal Engine Blueprint	68f5e1ab-e994-8327-833b-793b400326eb
+15	24-bit Gray code SSI	68f0d15b-8cac-832f-95de-eeb127613559
+16	Microprocessors in Eurorack	68f0f4d2-3114-8331-b5e3-d62f2bd3e846
+17	Auto-run Pico script	68ed6150-c0bc-832a-8811-cd107e31eb65
+18	Minor scale distances	68ee6724-3b78-8325-a790-2194af54c40a
+19	Farnell vs RS pricing	68e8fb03-65e8-8332-9c93-cd12c3073c30
+20	Update box render	68e8bb41-178c-832f-a9eb-f87a100d9310
+21	Touchscreen pitch mod replication	68e8e0cb-6808-832c-ab30-d151615c966d
+22	Adjust render width	68e8de2b-49f8-832e-a86d-dc22113b78d8
+23	Poll midi ports Raspberry Pi	68e6ffb1-96bc-8330-8a79-ce89d198615c
+24	Fatar keyboard integration (clean code)	68e0f147-ba30-8326-9dee-ac9e00f3636b
+25	Wiring diagram search results	68e2fd83-8dd0-8333-826b-39377242ed0c
+26	Check Fatar keyboard pins	68e10cfd-6b2c-832a-b25b-2fc52d966025
+27	Fatar keyboard integration (walking patterns)	68db0d1d-b6cc-8331-9dcf-46bbaa903417
+28	Soft-touch coating options	68e0a637-caa4-8333-adbf-825fc9ba204f
+29	Fader pin configuration explanation	68e09fda-b29c-8332-8fe0-388c3f95696f
+30	Capacitive and analog inputs	68dbd8ec-1c58-8333-8673-32c351f6b956
+31	LED matrix uses	68dc5b2c-667c-832b-981f-f974945fcfda
+32	Move file in terminal	68dbc4ac-6f60-8320-b83b-6d2e5fc12afa
+33	Add local Midibox files	68dbc3f3-ab78-832c-8c4d-2082850f9477
+34	Download Midibox code	68dbc209-366c-8324-8e01-2ff7b802886b
+35	GITHUB Language	68dbb7f3-51b8-8323-82fe-01d508976604
+36	GitHub sync on macOS	68dba020-5c8c-8324-b887-0c932c5c165a
+37	GitHub repo visibility	68db1edd-b44c-832e-8873-6a3acfdffcee
+38	Midibox Build phase 2 - Gadget mode and USB MIDI	68db1952-b1e4-8327-adbb-754d7f884d3a
+39	Midibox Build - Phase 1: Setup & Drivers	68d76d08-baa8-8329-90b9-2376b34b97ce

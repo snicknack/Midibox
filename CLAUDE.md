@@ -1,0 +1,210 @@
+# MidiBox — working notes for Claude
+
+MidiBox is Stephen's desktop MIDI controller, built around the keybed of a
+Studiologic SL88 Studio whose main board died. A Raspberry Pi 4 is the brain,
+an ESP32 drives the touchscreen, and a Pico W (now the separate KeySYS project)
+turns the keybed into USB MIDI. Brand: **Holson Instruments**; the screen's
+product name is **MIDI PLAYGROUND**. The signature feature is the **SuperCore**:
+one encoder with a NeoPixel ring and haptics that hosts SuperTempo glide,
+SuperMapper, SuperLFO and a recorder.
+
+The project was built with ChatGPT from 27 Sep to 8 Nov 2025 (keybed work ran
+to Jan 2026). Claude took it over on 11 Nov 2026. Everything ChatGPT knew is in
+`docs/chatgpt/` (41 transcripts, nine digests, ChatGPT's memory notes). This
+file is the synthesis; when it conflicts with the hardware on the bench, the
+bench wins and this file gets corrected.
+
+## Where things live
+
+| Thing | Location | Notes |
+|---|---|---|
+| This repo | `~/MidiBox` (Mac), GitHub `snicknack/Midibox`, branch `main` | Cloned 11 Nov 2026; the three original commits are the Sep 2025 Pi app |
+| Pi 4 | `midibox.local` (192.168.1.215 on 11 Nov 2026), user `stephennicholson`, project `~/midibox` (lowercase) | SSH key from this Mac installed 11 Nov 2026. Hostname `MidiBox`. The Pi tree is the authoritative copy of all Pi-side code |
+| Keybed firmware | `~/KeySYS` (Pico W, CircuitPython) | Claude-era successor of the ChatGPT "Keyboard velocity processing" work; decodes the STM32's key-time stream properly. Do not duplicate it here |
+| ESP32 sketch | `~/Documents/Arduino/lvgl_hello_gui_SL_V3_pi_Comms/` on the Mac (folder not found on 11 Nov 2026, so possibly on the Pi or another Mac) | `imports/chatgpt-sources/esp32/` holds the SquareLine export plus an **older** copy of the sketch (still `RX_PIN 20 / TX_PIN 21`, plain `Serial`), not the final Link-on-UART2 version |
+| GUI designs | `gui/eez/` (EEZ Studio projects, dropped 27 Oct 2025), SquareLine project on the Mac (not located yet) | SquareLine Studio 1.5.4 is the live designer |
+| ChatGPT export | `docs/chatgpt/` here; raw JSON and images index in `~/Documents/ChatGPT/Midibox raspberry pi/` | Chat images (photos of the build) were not downloaded; `assets_index.json` lists them |
+
+## Architecture
+
+```
+Fatar TP/100LR keybed ──(SL88 STM32 scanner board, UART 31250)──> Pico W [KeySYS] ──USB MIDI──> Mac / Pi USB-A
+                                                                                          
+Pi 4 (brain, Python 3, Pi OS Bookworm)
+ ├─ I2C1 (GPIO2/3): SX1509 0x3E (5 encoders + presses), ADS1115 0x48 (pitch/mod wheels), DRV2605L 0x5A (haptics)
+ ├─ UART0 /dev/serial0 (GPIO14 TX / GPIO15 RX) 115200 ──> ESP32 UART2 (GPIO16 RX / GPIO17 TX)   screen link
+ ├─ /dev/ttyAMA2, /dev/ttyAMA3 (uart2/uart3 overlays) <── Behringer Infinium X1 optical faders, 31250 8N1
+ ├─ GPIO13 (PWM1): 12-LED SK6812 RGBW NeoPixel ring around the SuperCore encoder
+ ├─ GPIO18: two WS2811 pixels for the wheels (planned, untested)
+ ├─ USB-A: host for class-compliant synths (Behringer Crave tested); USB-C: gadget MIDI to a computer (designed, never enabled)
+ └─ MIDI out via mido / ALSA virtual ports; FluidSynth over ALSA for local sound
+
+ESP32-WROOM-32 (screen only: LVGL 8.3.11 + TFT_eSPI, SquareLine UI, Arduino IDE)
+ ├─ 3.2" ILI9341 240x320 SPI, used landscape 320x240 (rotation 3)
+ └─ FT6236 capacitive touch on I2C 0x38
+```
+
+Roles were fixed on 2 Nov 2025: the ESP32 is display and touch only; every
+knob, fader, wheel, LED and haptic is on the Pi; the Pi pushes values to the
+screen and takes touch events back.
+
+## Hardware map
+
+### Pi 4 pins
+| Signal | Pi pin | Device |
+|---|---|---|
+| SDA1 / SCL1 | GPIO2 (pin 3) / GPIO3 (pin 5) | SX1509, ADS1115, DRV2605L (all 3V3) |
+| TXD0 / RXD0 | GPIO14 (pin 8) / GPIO15 (pin 10) | ESP32 link, `/dev/serial0`, 115200 8N1, no level shifter. Serial login console must be off (`raspi-config` → Serial: shell No, hardware Yes) |
+| Fader UARTs | uart2 and uart3 overlays, `/dev/ttyAMA2` and `/dev/ttyAMA3` | Overlay lines suggested were `dtoverlay=uart2,txd2_pin=0,rxd2_pin=1` and `dtoverlay=uart3,txd3_pin=4,rxd3_pin=5`; the physical GPIOs were never stated in chat. **Read `/boot/firmware/config.txt` on the Pi** |
+| NeoPixel ring DIN | GPIO13 (pin 33) | rpi_ws281x channel 1; GPIO17 is not a valid ws281x pin. 330 Ω series, ~1000 µF across 5 V. Needs `sudo` |
+| WS2811 wheel pixels | GPIO18 (pin 12) | planned; clashes with audio PWM if the headphone jack is used |
+| SX1509 INT | GPIO17 (pin 11) | only for the interrupt driver, which never worked; polling driver ignores it |
+| SX1509 RST | tied to 3V3 | **required**; floating RST was the 4 Nov breakthrough |
+
+Earlier wiring that is no longer current: the Pi's own 3.2" ILI9341/FT6236
+screen (CE0, DC GPIO24, RST GPIO25, FT6236 0x38 with CTP_RST to 3V3) from Sep
+2025, the keybed UART on GPIO15 with a control line on GPIO18 (Oct 2025), and
+the MPR121 transport pads at 0x5A. The MPR121's default address clashes with
+the DRV2605L at 0x5A; if the pads come back, move the MPR121 to 0x5B–0x5D.
+
+### SX1509 (I2C 0x3E, ADDR0/ADDR1 to GND)
+| Encoder | A/B pins | Press pin | Screen widget |
+|---|---|---|---|
+| 1 | P0 / P1 | P2 (only one wired and enabled, 7 Nov 2025) | `uic_t1Arc1` |
+| 2 | P3 / P4 | P5 | `uic_t1Arc2` |
+| 3 | P6 / P7 | P8 | `uic_t1Arc3` |
+| 4 | P9 / P10 | P11 | `uic_t1Arc4` |
+| 5 Tempo = SuperCore | P12 / P13 | P14 | `uic_t1Arc5Tempo` (to be renamed `uic_SuperCore1`) |
+
+P15 spare. Internal pull-ups ON for all A/B (Bank A encoders are dead without
+them), encoder common to GND, no debounce on A/B, hardware debounce on the
+press pins. Encoders are ALPS EC11E15244G5 (15 detents, 30 pulses/rev, push
+switch, middle leg = common). The first batch in Sep 2025 was the smooth
+EC11E183440. Note the SX1509 breakout silkscreen was found to be mislabelled
+once (P0/1/2 marked where P8/9/10 are); verify pin numbers on the real board.
+
+### Other parts
+- ADS1115 at 0x48: A0 pitch wheel, A1 mod wheel (outer legs 3V3/GND). A2/A3
+  were planned for faders before the optical faders arrived. Calibration
+  lives in JSON on the Pi (`config/ads1115_cal.json` with min/max/invert/
+  deadband in CC units, roughly pitch 75..98 and mod 76..100; a second
+  `config/calibration.json` was written by `calibrate_controls.py` for faders
+  plus wheels). Reconcile the two on the Pi.
+- Behringer Infinium X1 optical faders ×2: 3.3 V, serial 31250 8N1, output is
+  data-only byte pairs (no status byte) sweeping 0..127, in practice 1..126.
+  Boards marked P0954 / PCB906031 REV E-01 and ME003330, 4-pin JST. Pinout was
+  inferred, never metered: VCC 3V3, GND, TX, optional 4th. Do not feed 5 V.
+- DRV2605L at 0x5A, VIN on 5 V, IN/TRIG to GND. The motor fitted is an ERM
+  (runs in `use_ERM()` with library 1); a real LRA (Precision Microdrives
+  C08-005 or similar, library 6, `use_LRM()` in the older Adafruit lib) is
+  still to be fitted. The address is fixed, so the "second DRV2605L at 0x5B"
+  idea from the last chat is wrong; a second driver needs a mux or another bus.
+- NeoPixel ring: 12-LED SK6812 **RGBW** (not RGB, not 16), `pixel_order=GRBW`,
+  `bpp=4`, brightness 0.02–0.05, pixel 0 at 12 o'clock via a `top_offset`.
+- Enclosure: Retex 33020112 black sloped desktop box, 268×185×78 mm (CPC/
+  Farnell). Layout locked 1 Oct 2025 as "Box V1": faders left, wheels middle
+  left, screen centre, four encoders in a row plus the SuperCore. Faceplate
+  idea: polycarbonate overlay with a spot-white donut window and opal
+  diffuser ring around the SuperCore (no dimensions supplied yet).
+- Power: official 5.1 V 3 A PSU via a USB-C panel socket; `get_throttled` was
+  0x0 under test.
+
+### ESP32 (ESP32-WROOM-32 clone "ZY-ESP32", CH340C, 4 MB flash)
+| Function | GPIO |
+|---|---|
+| TFT SPI (VSPI) | SCK 18, MOSI 23, MISO 19, CS 5, DC 27, BL 32 (digital HIGH), RST tied to 3V3 so `TFT_RST -1` |
+| FT6236 touch | SDA 21, SCL 22 on a dedicated `TwoWire(0)` at 100 kHz; CTP_RST tied to 3V3 (a GPIO reset line held the bus) |
+| Pi link | UART2: RX 16 ← Pi GPIO14, TX 17 → Pi GPIO15, `HardwareSerial Link(2); Link.begin(115200, SERIAL_8N1, 16, 17)`. UART0 stays for USB |
+
+Toolchain that works: Arduino IDE, board "ESP32 Dev Module", esp32 core 3.3.2,
+upload 921600 (115200 if flaky), DIO, 40 MHz, default 4 MB partition, PSRAM
+off; TFT_eSPI 2.5.43 with `User_Setup.h` = ILI9341_DRIVER, 240×320, pins above,
+`TFT_INVERSION_ON`, SPI 40 MHz; LVGL **8.3.11** (LVGL 9 breaks everything);
+`lv_conf.h` in the sketch folder with `LV_CONF_INCLUDE_SIMPLE`. The panel needs
+inversion ON. Colour byte order must agree: the exported `lv_conf.h` has
+`LV_COLOR_16_SWAP 1` with `setSwapBytes(false)`; the other working pair is
+`SWAP 0` with `setSwapBytes(true)`. Rotation 3; touch map
+`x = map(p.y, 0, 320, 320, 0)`, `y = map(p.x, 0, 240, 0, 240)`.
+
+SquareLine export rules learned the hard way: flatten `ui_*.c` into the sketch
+root and change `#include "../ui.h"` to `"ui.h"`; never `#include` a `.c` from
+the `.ino`; cast `lv_anim_enable_t` and `void*` in `ui_helpers.c`; enable every
+`LV_FONT_MONTSERRAT_*` the UI uses; keep image assets ≤ 320 px (1024×1024 logos
+overflowed DROM by 1.3 MB); functions called from generated C must be
+`extern "C"` in the `.ino` and declared `extern` in `ui_events.c`.
+
+## Pi ↔ ESP32 protocol (newline-terminated ASCII, working since 2 Nov 2025)
+- Pi → ESP: `name:value\n`, value 0..127, e.g. `uic_pitchBar:90`, `uic_ModBar:83`, `uic_t1Arc1:64`.
+- ESP → Pi: JSON lines `{"get":"uic_t1Arc1","val":47}` when a widget is moved,
+  `{"set":"name","val":N}` echo after applying a command, `{"err":"unknown","name":"…"}`.
+- Widget ids: `uic_t1Arc1..4`, `uic_t1Arc5Tempo` (also referred to as
+  `uic_t1TempoArc`), `uic_pitchBar`, `uic_ModBar`. SquareLine events are
+  VALUE_CHANGED → CALL FUNCTION `ui_event_t1Arc1` etc.
+- Test from the Pi: `echo "uic_t1Arc1:64" > /dev/serial0`.
+
+## Software state (as of the last ChatGPT session, 8 Nov 2025)
+
+| Subsystem | Status | Where the code is |
+|---|---|---|
+| Encoders ×5 via SX1509 | Working with the polling driver `encoders_sx1509_poll2.py` (class `SX1509Encoders`, `begin()`, `read_and_zero()` → `(idx, delta, pressed)`, `close()`, x4 LUT). Arc1 press on P2 works with hardware debounce. Adding all five press pins made the tempo encoder self-oscillate and flood the haptics; reverted | Pi `~/midibox`; copy in `imports/chatgpt-sources/pi/` (version without the press pin) |
+| SuperCore prototype | Tempo encoder + RGBW ring on GPIO13 + DRV2605L tick/confirm/end-stop effects, in sync. Lives in `encoders_test.py` (`RingMeter` class, `apply_delta()`); the "clean" 7 Nov 15:39 rewrite assumed a generator API and does not run | Pi; partial copy in `imports/chatgpt-sources/pi/encoders_test.py` |
+| Pitch/mod wheels | Working: ADS1115 → `pi_pitch_mod_reader.py` → MIDI Pitch Bend + CC1 and `uic_pitchBar`/`uic_ModBar` on the screen, EMA smoothing 0.3 | Pi `~/midibox/pi_pitch_mod_reader.py` (final with smoothing and WS2811 patch only on the Pi) |
+| Optical faders | Working and calibrated: `drivers/faders/infinium_x1_serial.py`, `apps/tests/test_infinium_dual_faders.py`, `apps/tools/calibrate_controls.py` writing `config/calibration.json`. Scaling 1..126 fix and runtime loading of the JSON not done | Pi only; final text under "Assistant · 2025-10-09 17:27" and "2025-11-06 00:52" in chat 09 |
+| Screen | ESP32 + LVGL + SquareLine MainPage with splash screens, arcs, tempo arc, pitch/mod bars, rollers for scale/rate/root, arp/scale checkboxes. Link to Pi working both ways | Mac Arduino folder (missing); export in `imports/chatgpt-sources/esp32/` |
+| Keybed | Pico W "Plan A" worked (Oct 2025) with coarse velocity; KeySYS replaced it with proper key-time decoding | `~/KeySYS` |
+| Original Pi app (Sep 2025) | `midibox/` package in this repo: PIL-drawn pages on the Pi's own SPI TFT, MPR121 pads, mido router. Superseded by the ESP32 screen but still the repo's only committed code | `midibox/`, `midibox_all.py` |
+| MIDI routing, USB gadget mode, arpeggiator, banks, settings persistence | Designed only. Pi 4 USB-C gadget needs `dtoverlay=dwc2` and `g_midi`/configfs; never enabled | chats 37, 38 |
+| Wheel LEDs (WS2811 on GPIO18), transport pads, 2 m keybed cable, case build | Not started or unconfirmed | — |
+
+Pi package layout drifted across chats: `midibox/` (Sep, from GitHub), then
+`io/` renamed `midio/`, `tools/`, `config/`, `drivers/faders/`, `apps/tests/`,
+`apps/tools/`, `leds/`, `examples/`, plus loose top-level scripts. Run modules
+from the project root with `python3 -m …` (`sudo` for ws281x, DMA and serial).
+Pip on Bookworm needs `--break-system-packages` or a venv. **The Pi tree is the
+truth; list it before assuming any of this.**
+
+## Where it paused and the next steps ChatGPT and Stephen had agreed
+1. Fix the garbled press-event prints in `encoders_test.py` (one line per event, line-buffered stdout), confirm Arc1 presses.
+2. Enable presses 2–5 (P5, P8, P11, P14) one at a time, watching for the tempo-encoder oscillation. Root cause unknown; suspects are pull-up/debounce config, noise, or the haptics firing on every event.
+3. Rename the tempo tag to SuperCore and wrap encoder + ring + haptics in one class; colour/theme presets.
+4. Fit a real LRA; decide how to drive a second haptic (touchscreen) given the fixed DRV2605L address.
+5. Integrate `main.py`: encoders + wheels + faders → MIDI and screen, loading `calibration.json`, with ESP32 feedback both ways.
+6. Later: WS2811 wheel lights, MIDI routing page, USB gadget mode, arp/scale pages, case and faceplate.
+
+Separately in KeySYS: the sustain pedal intermittently crashed the Pico (Jan
+2026), the expression pedal on GP26 was unverified, aftertouch not handled.
+
+## Known conflicts and unverified claims
+- Keybed protocol: ChatGPT's SPI theory, the "walking-zero row markers", the
+  C1/C2/C3 status-byte tables and the "inverted velocity nibble" were all
+  guesses or partial. KeySYS's README has the real answer (the STM32 sends an
+  11-bit key travel time). Treat chats 24, 27, 26, 17, 40 as history.
+- Colour palettes differ between chats (#59F0E0 cyan on black; #00F0FF/#FF9900
+  on #1C1F24; #00CFFF "Tron" blue). The SquareLine project holds the real ones.
+- Fader UART GPIOs, the exact `calibration.json` schema, and whether the WS2811
+  wheel pixels ever lit are unknown until read from the Pi.
+- The 5-wire keybed harness colour-to-signal mapping flip-flopped; irrelevant
+  now that KeySYS owns the keybed link.
+- The debounce-code table and the dual-DRV2605L advice in the last chats are
+  marked dubious by the digests.
+
+## How Stephen likes to work (from the chats and ChatGPT's memory)
+- Hobby build, no timelines; small steps, one module per feature, test with
+  one-shot scripts before touching `main.py`.
+- **Preserve code that already works; make minimal, targeted changes rather
+  than rewriting.** Several ChatGPT rewrites were rejected for this reason.
+- Read the real files before writing code; ChatGPT guessing class names and
+  APIs caused most of the wasted days.
+- Keep touchscreen code in separate page modules, not one huge file.
+- Don't run a second Python process on the I2C bus while the app is running.
+- Keep the Pi 4 for the prototype; a Pi-header base board and an open,
+  community-style product come later.
+
+## Sources
+- `docs/chatgpt/digests/` — nine digests; start with `G6b.md` (latest state),
+  `G6a.md` (Pi↔ESP link, wheels), `G3.md` (faders, keybed on the Pi),
+  `G4b.md` (ESP32 bring-up), `G7-PM.md` (early plan).
+- `docs/chatgpt/chats/` — full transcripts; headings `## Assistant · date` are
+  cited by the digests when a final script exists only in a chat.
+- `docs/chatgpt/chatgpt_memory_midibox.md` — ChatGPT's own summary.
+- `docs/Midibox Build Overview.docx` — the original design overview (Sep 2025).

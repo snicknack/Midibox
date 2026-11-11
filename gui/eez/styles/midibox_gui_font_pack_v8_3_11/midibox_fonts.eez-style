@@ -1,0 +1,37 @@
+{
+  "version": "1.0",
+  "type": "eez-style-collection",
+  "name": "Midibox Fonts (LVGL 8.3.11)",
+  "styles": [
+    {
+      "name": "font_montserrat_16",
+      "type": "font-style",
+      "font_ref": "lv_font_montserrat_16",
+      "notes": "Built-in LVGL font, regular 16 px"
+    },
+    {
+      "name": "font_montserrat_22",
+      "type": "font-style",
+      "font_ref": "lv_font_montserrat_22",
+      "notes": "Built-in LVGL font, regular 22 px"
+    },
+    {
+      "name": "font_montserrat_18_semibold",
+      "type": "font-style",
+      "font_ref": "lv_font_montserrat_18_bold",
+      "notes": "Proxy for SemiBold using built-in Bold 18"
+    },
+    {
+      "name": "font_montserrat_26_bold",
+      "type": "font-style",
+      "font_ref": "lv_font_montserrat_26_bold",
+      "notes": "Built-in LVGL font, bold 26 px"
+    },
+    {
+      "name": "font_montserrat_28_extrabold",
+      "type": "font-style",
+      "font_ref": "lv_font_montserrat_28_bold",
+      "notes": "Placeholder: uses Bold 28. Replace with imported ExtraBold TTF if desired."
+    }
+  ]
+}
