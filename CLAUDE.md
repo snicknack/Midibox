@@ -21,7 +21,7 @@ bench wins and this file gets corrected.
 | This repo | `~/MidiBox` (Mac), GitHub `snicknack/Midibox`, branch `main` | Cloned 11 Nov 2026; the three original commits are the Sep 2025 Pi app |
 | Pi 4 | `midibox.local` (192.168.1.215 on 11 Nov 2026), user `stephennicholson`, project `~/midibox` (lowercase) | SSH key from this Mac installed 11 Nov 2026. Hostname `MidiBox`, Pi OS Bookworm, Python 3.11.2. **`pi/` in this repo is a snapshot of the Pi taken 11 Nov 2026** (`pi/midibox`, `pi/MIDIKeyboard`, `pi/old-versions`, `pi/home-scripts`, `pi/system`); the Pi itself stays the live copy until the code is moved into this repo properly. The Pi's home directory is itself an old checkout of the GitHub repo |
 | Keybed firmware | `~/KeySYS` (Pico W, CircuitPython) | Claude-era successor of the ChatGPT "Keyboard velocity processing" work; decodes the STM32's key-time stream properly. Do not duplicate it here. `pi/MIDIKeyboard/` is the Oct 2025 Pi-side sniffing and bridge history (`midibox_play.py`, `uart_plan_a.py`, the sniffers) |
-| ESP32 sketch | **Not on this Mac mini or the Pi.** The chats place it at `~/Documents/Arduino/lvgl_hello_gui_SL_V3_pi_Comms/`, and the logic-analyser work ran on an Intel MacBook Pro (macOS 13.7), so look there | `imports/chatgpt-sources/esp32/` holds the 2 Nov 2025 SquareLine export plus an **older** copy of the sketch (still `RX_PIN 20 / TX_PIN 21`, plain `Serial`), not the final Link-on-UART2 version |
+| ESP32 sketch | `esp32/arduino/lvgl_hello_gui_SL_V3_pi_Comms/` (final, 2 Nov 2025), copied from the Intel MacBook Pro `StevesMacBookPro-2.local` (macOS 13.7.1, user `stephennicholson`, SSH key installed 11 Nov 2026), which is the Arduino IDE and KingstVIS machine. `esp32/arduino/` also holds every earlier sketch (SL_V1, SL_V2, main_page_mockup, smoke_test_lvgl_touch, Midibox_TFT_GUI, spi_sniffer*) and `libraries/TFT_eSPI/User_Setup.h`; the 127 MB logo-image sketches were copied without their giant `.c` image tables | `imports/chatgpt-sources/esp32/` is an earlier save of the same sketch (`RX_PIN 20 / TX_PIN 21`); ignore it |
 | Screen UI design | `esp32/squareline/` (copied from `~/SquareLine`, saved 3 Nov 2025, with seven backups); `esp32/export-2025-10-27/` is the first export; `gui/eez/` are the abandoned EEZ Studio designs | SquareLine Studio 1.5.4, project 320×240, LVGL 8.3.11, board template ESP-BOX, non-flat export with screens/ and components/ subfolders |
 | ChatGPT export | `docs/chatgpt/` here; raw JSON and images index in `~/Documents/ChatGPT/Midibox raspberry pi/` | Chat images (photos of the build) were not downloaded; `assets_index.json` lists them |
 
@@ -119,17 +119,20 @@ once (P0/1/2 marked where P8/9/10 are); verify pin numbers on the real board.
 |---|---|
 | TFT SPI (VSPI) | SCK 18, MOSI 23, MISO 19, CS 5, DC 27, BL 32 (digital HIGH), RST tied to 3V3 so `TFT_RST -1` |
 | FT6236 touch | SDA 21, SCL 22 on a dedicated `TwoWire(0)` at 100 kHz; CTP_RST tied to 3V3 (a GPIO reset line held the bus) |
-| Pi link | UART2: RX 16 ← Pi GPIO14, TX 17 → Pi GPIO15, `HardwareSerial Link(2); Link.begin(115200, SERIAL_8N1, 16, 17)`. UART0 stays for USB |
+| Pi link | RX 16 ← Pi GPIO14, TX 17 → Pi GPIO15. The final sketch does **not** use a second UART: it remaps the primary port, `Serial.begin(115200, SERIAL_8N1, 16, 17)`, so every `Serial.printf` goes to the Pi and the USB serial monitor is silent at runtime (uploads still work through the CH340 on GPIO1/3). The `HardwareSerial Link(2)` / `LINK_SERIAL` variant in chat 06 was proposed but is only a comment block in the file |
 
-Toolchain that works: Arduino IDE, board "ESP32 Dev Module", esp32 core 3.3.2,
-upload 921600 (115200 if flaky), DIO, 40 MHz, default 4 MB partition, PSRAM
-off; TFT_eSPI 2.5.43 with `User_Setup.h` = ILI9341_DRIVER, 240×320, pins above,
-`TFT_INVERSION_ON`, SPI 40 MHz; LVGL **8.3.11** (LVGL 9 breaks everything);
-`lv_conf.h` in the sketch folder with `LV_CONF_INCLUDE_SIMPLE`. The panel needs
-inversion ON. Colour byte order must agree: the exported `lv_conf.h` has
-`LV_COLOR_16_SWAP 1` with `setSwapBytes(false)`; the other working pair is
-`SWAP 0` with `setSwapBytes(true)`. Rotation 3; touch map
-`x = map(p.y, 0, 320, 320, 0)`, `y = map(p.x, 0, 240, 0, 240)`.
+Toolchain that works (MacBook): Arduino IDE, board "ESP32 Dev Module", esp32
+core 3.3.2, upload 921600 (115200 if flaky), DIO, 40 MHz, default 4 MB
+partition, PSRAM off; TFT_eSPI 2.5.43 with the `User_Setup.h` kept in
+`esp32/arduino/libraries/TFT_eSPI/` (ILI9341_DRIVER, 240×320, MISO 19 MOSI 23
+SCLK 18 CS 5 DC 27 RST -1, `TFT_INVERSION_ON`, SPI 40 MHz); LVGL **8.3.11**
+(LVGL 9 breaks everything); Adafruit FT6206 1.1.0; `lv_conf.h` in the sketch
+folder with `LV_CONF_INCLUDE_SIMPLE`. The panel needs inversion ON. Colour byte
+order in the final sketch: `LV_COLOR_16_SWAP 1` with `tft.setSwapBytes(false)`
+(the other consistent pair is `SWAP 0` with `setSwapBytes(true)`). Rotation 3;
+touch on `TwoWire(0)` at 100 kHz, `ts.begin(40, &TouchWire)`, map
+`x = map(p.y, 0, 320, 320, 0)`, `y = map(p.x, 0, 240, 0, 240)`; draw buffer
+320×40; `lv_tick_inc` in `loop()`.
 
 SquareLine export rules learned the hard way: flatten `ui_*.c` into the sketch
 root and change `#include "../ui.h"` to `"ui.h"`; never `#include` a `.c` from
@@ -145,6 +148,12 @@ overflowed DROM by 1.3 MB); functions called from generated C must be
 - Widget ids: `uic_t1Arc1..4`, `uic_t1Arc5Tempo` (also referred to as
   `uic_t1TempoArc`), `uic_pitchBar`, `uic_ModBar`. SquareLine events are
   VALUE_CHANGED → CALL FUNCTION `ui_event_t1Arc1` etc.
+- What the final sketch actually implements: `parseSerialCommand()` handles
+  only `uic_t1Arc1`, `uic_t1Arc2`, `uic_ModBar` and `uic_pitchBar` (bars
+  clamped 0..127); `ui_events.c` sends `get` for Arc1–4 and both bars, and
+  `ui_event_t1TempoArc` is empty. Arc3, Arc4 and the tempo arc still need
+  parser cases, and `sendWidgetValue` is `extern "C"` in the `.ino` with an
+  `extern` declaration at the top of `ui_events.c`.
 - Test from the Pi: `echo "uic_t1Arc1:64" > /dev/serial0`.
 
 ## Software state (as of the last ChatGPT session, 8 Nov 2025)
@@ -156,7 +165,7 @@ overflowed DROM by 1.3 MB); functions called from generated C must be
 | Pitch/mod wheels | Working: ADS1115 → `pi/midibox/midio/pi_pitch_mod_reader.py` (4 Nov 2025) → MIDI Pitch Bend + CC1, `uic_pitchBar`/`uic_ModBar` over `/dev/serial0`, and the two WS2811 wheel pixels. Smoothing alpha 0.7 in the file. Run from `~/midibox` as `sudo python3 -m midio.pi_pitch_mod_reader` (relative imports). The 2 Nov copy in `pi/home-scripts/` is older | `pi/midibox/midio/pi_pitch_mod_reader.py` |
 | Optical faders | Working and calibrated: `pi/midibox/drivers/faders/infinium_x1_serial.py` (dataclass configs, `InfiniumX1Serial.process()` → event dict with `norm`), `apps/tests/test_infinium_dual_faders.py` (ttyAMA2 + ttyAMA3, CC 74 page "A"), `apps/tools/calibrate_controls.py` writing `config/calibration.json`. Fader 1 calibration is empty; scaling 1..126 and runtime loading in the main app not done | `pi/midibox/drivers/faders/`, `pi/midibox/apps/` |
 | Headless I/O service | `pi/midibox/main.py` (4 Nov 2025) is only a ChatGPT skeleton: imports the interrupt driver and `ads1115_mod`, prints values, "later: send to ESP32". Nothing is wired together yet; no systemd service exists on the Pi | `pi/midibox/main.py` |
-| Screen | ESP32 + LVGL + SquareLine: splashscreen, splashscreen2, MainPage with a TabView, encoder arcs `uic_t1Arc1..4`, `uic_t1Arc5Tempo`, pitch/mod bars, rollers for scale/rate/root, arp/scale checkboxes; `ui_events.c` has empty `scalePopulateFunction`, `ratePopulateFunction`, `arpTypeFunction`, `rootPopulateFunction`. Link to Pi working both ways | Design `esp32/squareline/`; export `imports/chatgpt-sources/esp32/`; final sketch missing (see above) |
+| Screen | ESP32 + LVGL + SquareLine: splashscreen, splashscreen2, MainPage with a TabView, encoder arcs `uic_t1Arc1..4`, `uic_t1Arc5Tempo`, pitch/mod bars, rollers for scale/rate/root, arp/scale checkboxes; `ui_events.c` has empty `scalePopulateFunction`, `ratePopulateFunction`, `arpTypeFunction`, `rootPopulateFunction`. Link to Pi working both ways for arcs 1–2 and the bars | Design `esp32/squareline/`; sketch `esp32/arduino/lvgl_hello_gui_SL_V3_pi_Comms/` |
 | Keybed | Pico W "Plan A" worked (Oct 2025) with coarse velocity; KeySYS replaced it with proper key-time decoding | `~/KeySYS` |
 | Original Pi app (Sep 2025) | `midibox/` package in this repo: PIL-drawn pages on the Pi's own SPI TFT, MPR121 pads, mido router. Superseded by the ESP32 screen but still the repo's only committed code | `midibox/`, `midibox_all.py` |
 | MIDI routing, USB gadget mode, arpeggiator, banks, settings persistence | Designed only. Pi 4 USB-C gadget needs `dtoverlay=dwc2` and `g_midi`/configfs; never enabled | chats 37, 38 |
@@ -196,8 +205,8 @@ Separately in KeySYS: the sustain pedal intermittently crashed the Pico (Jan
   on #1C1F24; #00CFFF "Tron" blue). The SquareLine project holds the real ones.
 - Whether the WS2811 wheel pixels lit as coded is unconfirmed (the code is
   there; the chats never reported a result).
-- The final ESP32 sketch is not in any copy we hold; until it is found, the
-  protocol section above plus `imports/chatgpt-sources/esp32/` is the spec.
+- The digests describe the Pi link as `HardwareSerial Link(2)`; the file on
+  disk remaps `Serial` instead. Trust the file.
 - The 5-wire keybed harness colour-to-signal mapping flip-flopped; irrelevant
   now that KeySYS owns the keybed link.
 - The debounce-code table and the dual-DRV2605L advice in the last chats are
@@ -216,6 +225,11 @@ Separately in KeySYS: the sustain pedal intermittently crashed the Pico (Jan
   community-style product come later.
 
 ## Sources
+- `docs/captures/keybed-logic-analyser-2025-10-04/` — KingstVIS CSV exports
+  of the keybed bus (one per key C1–C5, idle, and a MOSI timing burst); the
+  bus they captured is the keybed-to-STM32 link, now KeySYS's business.
+- `pi/macbook-older-code/` — the MacBook's "OLDER CODE" folder, including
+  `midistream.txt`, the running-status fader parser class.
 - `docs/chatgpt/digests/` — nine digests; start with `G6b.md` (latest state),
   `G6a.md` (Pi↔ESP link, wheels), `G3.md` (faders, keybed on the Pi),
   `G4b.md` (ESP32 bring-up), `G7-PM.md` (early plan).

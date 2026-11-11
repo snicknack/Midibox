@@ -1,0 +1,62 @@
+class MidiStream:
+    """
+    Robust MIDI byte stream parser that tolerates running-status-only streams.
+    If no status has been seen yet but data bytes arrive in even pairs, we emit PB events.
+    """
+    def __init__(self, default_mode="pb"):
+        self.status = None
+        self._pair = []
+        self.default_mode = default_mode  # "pb" or "cc"
+
+    def feed(self, data: bytes):
+        events = []
+        i = 0
+        while i < len(data):
+            b = data[i]
+            if b & 0x80:
+                # status byte
+                self.status = b
+                self._pair.clear()
+                i += 1
+                continue
+
+            # data byte
+            if self.status is None:
+                # No status yet (running-status-only stream) -> infer pairs
+                self._pair.append(b)
+                if len(self._pair) == 2:
+                    if self.default_mode == "pb":
+                        lsb, msb = self._pair
+                        events.append(("pb", 1, (msb << 7) | lsb))  # assume ch 1
+                    else:
+                        cc, val = self._pair
+                        events.append(("cc", 1, cc, val))
+                    self._pair.clear()
+                i += 1
+                continue
+
+            st = self.status & 0xF0
+            ch = (self.status & 0x0F) + 1
+
+            if st == 0xE0:  # Pitch Bend
+                if i + 1 < len(data):
+                    lsb = data[i]
+                    msb = data[i + 1]
+                    events.append(("pb", ch, (msb << 7) | lsb))
+                    i += 2
+                else:
+                    break
+            elif st == 0xB0:  # Control Change
+                if i + 1 < len(data):
+                    cc = data[i]
+                    val = data[i + 1]
+                    events.append(("cc", ch, cc, val))
+                    i += 2
+                else:
+                    break
+            elif self.status == 0xFE:  # Active Sensing
+                i += 1
+            else:
+                # Skip unknown; try to move ahead by 1
+                i += 1
+        return events
