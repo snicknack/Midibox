@@ -17,6 +17,8 @@ died. Holson Instruments "MIDI PLAYGROUND".
 |---|---|
 | `CLAUDE.md` | State of the project, hardware map, protocol, next steps. Read this first. |
 | `midibox/`, `midibox_all.py` | The original Sep 2025 Pi app (PIL pages on the Pi's own SPI TFT). Superseded by the ESP32 screen. |
+| `pi/midibox/service/` | **The service**: every device in one process, driving PatchSYS over its Link. `sudo python3 -m service.midibox_service` on the Pi. |
+| `pi/` (rest) | Snapshot of the Pi's `~/midibox`, keyboard sniffing history, old versions and boot config. |
 | `imports/chatgpt-sources/pi/` | Pi-side scripts as uploaded to ChatGPT (encoders, ADS1115, main). The Pi's `~/midibox` is the live copy. |
 | `imports/chatgpt-sources/esp32/` | SquareLine export of the screen UI plus an early copy of the Arduino sketch. |
 | `gui/eez/` | EEZ Studio GUI projects, theme and font packs (abandoned for SquareLine in Oct 2025). |
