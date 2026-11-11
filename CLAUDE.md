@@ -19,10 +19,10 @@ bench wins and this file gets corrected.
 | Thing | Location | Notes |
 |---|---|---|
 | This repo | `~/MidiBox` (Mac), GitHub `snicknack/Midibox`, branch `main` | Cloned 11 Nov 2026; the three original commits are the Sep 2025 Pi app |
-| Pi 4 | `midibox.local` (192.168.1.215 on 11 Nov 2026), user `stephennicholson`, project `~/midibox` (lowercase) | SSH key from this Mac installed 11 Nov 2026. Hostname `MidiBox`. The Pi tree is the authoritative copy of all Pi-side code |
-| Keybed firmware | `~/KeySYS` (Pico W, CircuitPython) | Claude-era successor of the ChatGPT "Keyboard velocity processing" work; decodes the STM32's key-time stream properly. Do not duplicate it here |
-| ESP32 sketch | `~/Documents/Arduino/lvgl_hello_gui_SL_V3_pi_Comms/` on the Mac (folder not found on 11 Nov 2026, so possibly on the Pi or another Mac) | `imports/chatgpt-sources/esp32/` holds the SquareLine export plus an **older** copy of the sketch (still `RX_PIN 20 / TX_PIN 21`, plain `Serial`), not the final Link-on-UART2 version |
-| GUI designs | `gui/eez/` (EEZ Studio projects, dropped 27 Oct 2025), SquareLine project on the Mac (not located yet) | SquareLine Studio 1.5.4 is the live designer |
+| Pi 4 | `midibox.local` (192.168.1.215 on 11 Nov 2026), user `stephennicholson`, project `~/midibox` (lowercase) | SSH key from this Mac installed 11 Nov 2026. Hostname `MidiBox`, Pi OS Bookworm, Python 3.11.2. **`pi/` in this repo is a snapshot of the Pi taken 11 Nov 2026** (`pi/midibox`, `pi/MIDIKeyboard`, `pi/old-versions`, `pi/home-scripts`, `pi/system`); the Pi itself stays the live copy until the code is moved into this repo properly. The Pi's home directory is itself an old checkout of the GitHub repo |
+| Keybed firmware | `~/KeySYS` (Pico W, CircuitPython) | Claude-era successor of the ChatGPT "Keyboard velocity processing" work; decodes the STM32's key-time stream properly. Do not duplicate it here. `pi/MIDIKeyboard/` is the Oct 2025 Pi-side sniffing and bridge history (`midibox_play.py`, `uart_plan_a.py`, the sniffers) |
+| ESP32 sketch | **Not on this Mac mini or the Pi.** The chats place it at `~/Documents/Arduino/lvgl_hello_gui_SL_V3_pi_Comms/`, and the logic-analyser work ran on an Intel MacBook Pro (macOS 13.7), so look there | `imports/chatgpt-sources/esp32/` holds the 2 Nov 2025 SquareLine export plus an **older** copy of the sketch (still `RX_PIN 20 / TX_PIN 21`, plain `Serial`), not the final Link-on-UART2 version |
+| Screen UI design | `esp32/squareline/` (copied from `~/SquareLine`, saved 3 Nov 2025, with seven backups); `esp32/export-2025-10-27/` is the first export; `gui/eez/` are the abandoned EEZ Studio designs | SquareLine Studio 1.5.4, project 320×240, LVGL 8.3.11, board template ESP-BOX, non-flat export with screens/ and components/ subfolders |
 | ChatGPT export | `docs/chatgpt/` here; raw JSON and images index in `~/Documents/ChatGPT/Midibox raspberry pi/` | Chat images (photos of the build) were not downloaded; `assets_index.json` lists them |
 
 ## Architecture
@@ -54,10 +54,11 @@ screen and takes touch events back.
 | Signal | Pi pin | Device |
 |---|---|---|
 | SDA1 / SCL1 | GPIO2 (pin 3) / GPIO3 (pin 5) | SX1509, ADS1115, DRV2605L (all 3V3) |
-| TXD0 / RXD0 | GPIO14 (pin 8) / GPIO15 (pin 10) | ESP32 link, `/dev/serial0`, 115200 8N1, no level shifter. Serial login console must be off (`raspi-config` → Serial: shell No, hardware Yes) |
-| Fader UARTs | uart2 and uart3 overlays, `/dev/ttyAMA2` and `/dev/ttyAMA3` | Overlay lines suggested were `dtoverlay=uart2,txd2_pin=0,rxd2_pin=1` and `dtoverlay=uart3,txd3_pin=4,rxd3_pin=5`; the physical GPIOs were never stated in chat. **Read `/boot/firmware/config.txt` on the Pi** |
+| TXD0 / RXD0 | GPIO14 (pin 8) / GPIO15 (pin 10) | ESP32 link, `/dev/serial0` → `ttyS0` (the mini-UART; Bluetooth keeps the PL011), 115200 8N1, no level shifter. `enable_uart=1` is set. Serial login console is off (`cmdline.txt` has no serial console) |
+| Fader 1 UART | `/dev/ttyAMA2`, `dtoverlay=uart2,txd2_pin=0,rxd2_pin=1` → fader TX into **GPIO1 (pin 28)** | Confirmed from `pi/system/config.txt`. GPIO0/1 are the HAT ID-EEPROM pins; fine without a HAT |
+| Fader 2 UART | `/dev/ttyAMA3`, `dtoverlay=uart3,txd3_pin=4,rxd3_pin=5` → fader TX into **GPIO5 (pin 29)** | Confirmed from `pi/system/config.txt` |
 | NeoPixel ring DIN | GPIO13 (pin 33) | rpi_ws281x channel 1; GPIO17 is not a valid ws281x pin. 330 Ω series, ~1000 µF across 5 V. Needs `sudo` |
-| WS2811 wheel pixels | GPIO18 (pin 12) | planned; clashes with audio PWM if the headphone jack is used |
+| WS2811 wheel pixels | GPIO18 (pin 12) | implemented in `pi/midibox/midio/pi_pitch_mod_reader.py` (pixel 0 pitch: green up / red down, brighter away from centre; pixel 1 mod: blue with a floor of 40). Clashes with audio PWM if the headphone jack is used |
 | SX1509 INT | GPIO17 (pin 11) | only for the interrupt driver, which never worked; polling driver ignores it |
 | SX1509 RST | tied to 3V3 | **required**; floating RST was the 4 Nov breakthrough |
 
@@ -85,11 +86,15 @@ once (P0/1/2 marked where P8/9/10 are); verify pin numbers on the real board.
 
 ### Other parts
 - ADS1115 at 0x48: A0 pitch wheel, A1 mod wheel (outer legs 3V3/GND). A2/A3
-  were planned for faders before the optical faders arrived. Calibration
-  lives in JSON on the Pi (`config/ads1115_cal.json` with min/max/invert/
-  deadband in CC units, roughly pitch 75..98 and mod 76..100; a second
-  `config/calibration.json` was written by `calibrate_controls.py` for faders
-  plus wheels). Reconcile the two on the Pi.
+  were planned for faders before the optical faders arrived. Two calibration
+  files exist in `pi/midibox/config/`: `ads1115_cal.json` (CC units: pitch
+  75..98 deadband 3, mod 76..100 deadband 2; used by `pi_pitch_mod_reader.py`)
+  and `calibration.json` (0..1 units from `calibrate_controls.py`: pitch
+  0.604..0.788, mod 0.602..0.793, fader2 0..0.959, **fader1 0..0, so fader 1
+  was not calibrated**; used by `test_infinium_dual_faders.py`). Two ADS
+  reader classes also exist: `midio/ads1115_reader.py` (`read_cc()` → four
+  ints, `read_raw()`, `read_all()`) and `midio/ads1115_mod.py` (threaded,
+  `values_cc`, `begin()/close()`). Pick one when integrating.
 - Behringer Infinium X1 optical faders ×2: 3.3 V, serial 31250 8N1, output is
   data-only byte pairs (no status byte) sweeping 0..127, in practice 1..126.
   Boards marked P0954 / PCB906031 REV E-01 and ME003330, 4-pin JST. Pinout was
@@ -146,22 +151,30 @@ overflowed DROM by 1.3 MB); functions called from generated C must be
 
 | Subsystem | Status | Where the code is |
 |---|---|---|
-| Encoders ×5 via SX1509 | Working with the polling driver `encoders_sx1509_poll2.py` (class `SX1509Encoders`, `begin()`, `read_and_zero()` → `(idx, delta, pressed)`, `close()`, x4 LUT). Arc1 press on P2 works with hardware debounce. Adding all five press pins made the tempo encoder self-oscillate and flood the haptics; reverted | Pi `~/midibox`; copy in `imports/chatgpt-sources/pi/` (version without the press pin) |
-| SuperCore prototype | Tempo encoder + RGBW ring on GPIO13 + DRV2605L tick/confirm/end-stop effects, in sync. Lives in `encoders_test.py` (`RingMeter` class, `apply_delta()`); the "clean" 7 Nov 15:39 rewrite assumed a generator API and does not run | Pi; partial copy in `imports/chatgpt-sources/pi/encoders_test.py` |
-| Pitch/mod wheels | Working: ADS1115 → `pi_pitch_mod_reader.py` → MIDI Pitch Bend + CC1 and `uic_pitchBar`/`uic_ModBar` on the screen, EMA smoothing 0.3 | Pi `~/midibox/pi_pitch_mod_reader.py` (final with smoothing and WS2811 patch only on the Pi) |
-| Optical faders | Working and calibrated: `drivers/faders/infinium_x1_serial.py`, `apps/tests/test_infinium_dual_faders.py`, `apps/tools/calibrate_controls.py` writing `config/calibration.json`. Scaling 1..126 fix and runtime loading of the JSON not done | Pi only; final text under "Assistant · 2025-10-09 17:27" and "2025-11-06 00:52" in chat 09 |
-| Screen | ESP32 + LVGL + SquareLine MainPage with splash screens, arcs, tempo arc, pitch/mod bars, rollers for scale/rate/root, arp/scale checkboxes. Link to Pi working both ways | Mac Arduino folder (missing); export in `imports/chatgpt-sources/esp32/` |
+| Encoders ×5 via SX1509 | Working with the polling drivers in `pi/midibox/midio/`: `encoders_sx1509_poll2.py` (class `SX1509Encoders`, `begin()`, `read_and_zero()` → `(idx, delta, False)`, `close()`, x4 LUT, no buttons) and `encoders_sx1509_poll3.py` (same API plus the Arc1 press on P2 with hardware debounce; this is the "16:41" driver from the last chat). `encoders_sx1509.py` (interrupt) and `encoders_sx1509_driver.py` (smbus2 rewrite) are dead ends. Adding all five press pins made the tempo encoder self-oscillate; reverted | `pi/midibox/midio/` |
+| SuperCore prototype | Tempo encoder + RGBW ring on GPIO13 + DRV2605L tick/confirm/end-stop, in sync. `pi/midibox/encoders_test.py` (8 Nov 2025, the last thing run) imports **poll3**, uses `RingMeter` (12 px, `top_offset=7`, vmin 20 / vmax 201, brightness 0.05, GRBW) and `apply_delta()`; it ignores the pressed flag, so the garbled press-print patch was reverted rather than fixed. `working_encoders_test.py` is the same on poll2; `encoders_test_buttons.py` differs only in ring colour. Bugs to know: the end-stop check tests `in (0, 201)` but tempo is clamped to 20..200, so it never fires; `RingMeter._color` is a stub | `pi/midibox/encoders_test.py`, `pi/home-scripts/supercore_ring.py` (earlier 16-px RGB version), `pi/home-scripts/drv2605l_*.py` |
+| Pitch/mod wheels | Working: ADS1115 → `pi/midibox/midio/pi_pitch_mod_reader.py` (4 Nov 2025) → MIDI Pitch Bend + CC1, `uic_pitchBar`/`uic_ModBar` over `/dev/serial0`, and the two WS2811 wheel pixels. Smoothing alpha 0.7 in the file. Run from `~/midibox` as `sudo python3 -m midio.pi_pitch_mod_reader` (relative imports). The 2 Nov copy in `pi/home-scripts/` is older | `pi/midibox/midio/pi_pitch_mod_reader.py` |
+| Optical faders | Working and calibrated: `pi/midibox/drivers/faders/infinium_x1_serial.py` (dataclass configs, `InfiniumX1Serial.process()` → event dict with `norm`), `apps/tests/test_infinium_dual_faders.py` (ttyAMA2 + ttyAMA3, CC 74 page "A"), `apps/tools/calibrate_controls.py` writing `config/calibration.json`. Fader 1 calibration is empty; scaling 1..126 and runtime loading in the main app not done | `pi/midibox/drivers/faders/`, `pi/midibox/apps/` |
+| Headless I/O service | `pi/midibox/main.py` (4 Nov 2025) is only a ChatGPT skeleton: imports the interrupt driver and `ads1115_mod`, prints values, "later: send to ESP32". Nothing is wired together yet; no systemd service exists on the Pi | `pi/midibox/main.py` |
+| Screen | ESP32 + LVGL + SquareLine: splashscreen, splashscreen2, MainPage with a TabView, encoder arcs `uic_t1Arc1..4`, `uic_t1Arc5Tempo`, pitch/mod bars, rollers for scale/rate/root, arp/scale checkboxes; `ui_events.c` has empty `scalePopulateFunction`, `ratePopulateFunction`, `arpTypeFunction`, `rootPopulateFunction`. Link to Pi working both ways | Design `esp32/squareline/`; export `imports/chatgpt-sources/esp32/`; final sketch missing (see above) |
 | Keybed | Pico W "Plan A" worked (Oct 2025) with coarse velocity; KeySYS replaced it with proper key-time decoding | `~/KeySYS` |
 | Original Pi app (Sep 2025) | `midibox/` package in this repo: PIL-drawn pages on the Pi's own SPI TFT, MPR121 pads, mido router. Superseded by the ESP32 screen but still the repo's only committed code | `midibox/`, `midibox_all.py` |
 | MIDI routing, USB gadget mode, arpeggiator, banks, settings persistence | Designed only. Pi 4 USB-C gadget needs `dtoverlay=dwc2` and `g_midi`/configfs; never enabled | chats 37, 38 |
 | Wheel LEDs (WS2811 on GPIO18), transport pads, 2 m keybed cable, case build | Not started or unconfirmed | — |
 
-Pi package layout drifted across chats: `midibox/` (Sep, from GitHub), then
-`io/` renamed `midio/`, `tools/`, `config/`, `drivers/faders/`, `apps/tests/`,
-`apps/tools/`, `leds/`, `examples/`, plus loose top-level scripts. Run modules
-from the project root with `python3 -m …` (`sudo` for ws281x, DMA and serial).
-Pip on Bookworm needs `--break-system-packages` or a venv. **The Pi tree is the
-truth; list it before assuming any of this.**
+The Pi's `~/midibox` (snapshot in `pi/midibox/`) is a flat project folder,
+not an installable package despite `pyproject.toml`: `midio/` (ADS, encoders,
+wheel reader, the old mido `router.py`), `drivers/faders/`, `drivers/tft.py`
+and `touch_ft6236.py` (old Pi screen), `apps/tests/`, `apps/tools/`,
+`config/`, `tools/`, `leds/max7219_display.py`, `examples/`, `ui/` (old PIL
+pages) and the loose test scripts. The folder `io/` was renamed `midio/`
+because it shadowed the stdlib. Scripts are run from `~/midibox` with
+`sudo python3 encoders_test.py` or `python3 -m midio.…` (see
+`pi/system/services_and_uart.txt` and the Pi's bash history for what was
+actually typed). Installed on the Pi: smbus2, pyserial, mido, python-rtmidi,
+rpi-ws281x, adafruit-circuitpython-neopixel / drv2605 / ads1x15 / mpr121,
+Blinka, luma.led-matrix, Pillow. Pip on Bookworm needs
+`--break-system-packages` or a venv. No `dwc2`/gadget overlay is enabled.
 
 ## Where it paused and the next steps ChatGPT and Stephen had agreed
 1. Fix the garbled press-event prints in `encoders_test.py` (one line per event, line-buffered stdout), confirm Arc1 presses.
@@ -181,8 +194,10 @@ Separately in KeySYS: the sustain pedal intermittently crashed the Pico (Jan
   11-bit key travel time). Treat chats 24, 27, 26, 17, 40 as history.
 - Colour palettes differ between chats (#59F0E0 cyan on black; #00F0FF/#FF9900
   on #1C1F24; #00CFFF "Tron" blue). The SquareLine project holds the real ones.
-- Fader UART GPIOs, the exact `calibration.json` schema, and whether the WS2811
-  wheel pixels ever lit are unknown until read from the Pi.
+- Whether the WS2811 wheel pixels lit as coded is unconfirmed (the code is
+  there; the chats never reported a result).
+- The final ESP32 sketch is not in any copy we hold; until it is found, the
+  protocol section above plus `imports/chatgpt-sources/esp32/` is the spec.
 - The 5-wire keybed harness colour-to-signal mapping flip-flopped; irrelevant
   now that KeySYS owns the keybed link.
 - The debounce-code table and the dual-DRV2605L advice in the last chats are

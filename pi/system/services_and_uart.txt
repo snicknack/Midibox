@@ -1,0 +1,33 @@
+### dmesg uart
+[    0.000000] Kernel command line: coherent_pool=1M 8250.nr_uarts=1 snd_bcm2835.enable_headphones=0 cgroup_disable=memory numa_policy=interleave nvme.max_host_mem_size_mb=0 snd_bcm2835.enable_headphones=1 snd_bcm2835.enable_hdmi=1 snd_bcm2835.enable_hdmi=0  numa=fake=2 system_heap.max_order=0 smsc95xx.macaddr=DC:A6:32:31:52:2D vc_mem.mem_base=0x3ec00000 vc_mem.mem_size=0x40000000  console=tty1 root=PARTUUID=4b46db28-02 rootfstype=ext4 fsck.repair=yes rootwait quiet splash plymouth.ignore-serial-consoles cfg80211.ieee80211_regdom=GB
+[    0.027460] Serial: AMBA PL011 UART driver
+[    0.939907] Serial: 8250/16550 driver, 1 ports, IRQ sharing enabled
+[    1.147842] usb usb1: New USB device strings: Mfr=3, Product=2, SerialNumber=1
+[    1.147855] usb usb1: SerialNumber: 0000:01:00.0
+[    1.148560] usb usb2: New USB device strings: Mfr=3, Product=2, SerialNumber=1
+[    1.148573] usb usb2: SerialNumber: 0000:01:00.0
+[    1.175802] uart-pl011 fe201000.serial: there is not valid maps for state default
+[    1.176013] uart-pl011 fe201000.serial: cts_event_workaround enabled
+[    1.176991] fe201000.serial: ttyAMA1 at MMIO 0xfe201000 (irq = 39, base_baud = 0) is a PL011 rev3
+[    1.177118] serial serial0: tty port ttyAMA1 registered
+[    1.177401] fe201400.serial: ttyAMA2 at MMIO 0xfe201400 (irq = 39, base_baud = 0) is a PL011 rev3
+[    1.177830] fe201600.serial: ttyAMA3 at MMIO 0xfe201600 (irq = 39, base_baud = 0) is a PL011 rev3
+[    1.178729] bcm2835-aux-uart fe215040.serial: there is not valid maps for state default
+[    1.179319] fe215040.serial: ttyS0 at MMIO 0xfe215040 (irq = 40, base_baud = 62500000) is a 16550
+[    1.542734] usb 1-1: New USB device strings: Mfr=0, Product=1, SerialNumber=0
+[    1.953910] usb 1-1.3: New USB device strings: Mfr=1, Product=2, SerialNumber=0
+[    4.548211] Bluetooth: HCI UART driver ver 2.3
+[    4.548230] Bluetooth: HCI UART protocol H4 registered
+[    4.548281] Bluetooth: HCI UART protocol Three-wire (H5) registered
+### raspi-gpio
+GPIO 0: level=1 alt=4 func=TXD2 pull=NONE
+GPIO 1: level=1 alt=4 func=RXD2 pull=UP
+GPIO 2: level=1 alt=0 func=SDA1 pull=UP
+GPIO 3: level=1 alt=0 func=SCL1 pull=UP
+GPIO 4: level=1 alt=4 func=TXD3 pull=NONE
+GPIO 5: level=1 alt=4 func=RXD3 pull=UP
+GPIO 13: level=0 alt=0 func=PWM0_1 pull=NONE
+GPIO 14: level=1 alt=5 func=TXD1 pull=NONE
+GPIO 15: level=1 alt=5 func=RXD1 pull=UP
+GPIO 17: level=0 func=INPUT pull=DOWN
+GPIO 18: level=0 func=INPUT pull=DOWN

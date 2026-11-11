@@ -1,0 +1,30 @@
+{
+  "0": {
+    "deadband": 1,
+    "invert": false,
+    "max": 98,
+    "min": 75,
+    "name": "Pitch"
+  },
+  "1": {
+    "deadband": 1,
+    "invert": false,
+    "max": 100,
+    "min": 76,
+    "name": "Mod"
+  },
+  "2": {
+    "deadband": 0,
+    "invert": false,
+    "max": 72,
+    "min": 72,
+    "name": "FaderA"
+  },
+  "3": {
+    "deadband": 0,
+    "invert": false,
+    "max": 72,
+    "min": 72,
+    "name": "FaderB"
+  }
+}

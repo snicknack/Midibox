@@ -1,0 +1,23 @@
+23:56:29 Scan #1 TX->Conv: [16B] C0 00 C0 38 F8 C0 00 F8 C0 00 C0 00 F8 00 38 F8 | ...8..........8. | Idle scan
+23:56:29 Scan #2 TX->Conv: [16B] 00 F8 38 38 F8 00 F8 38 38 00 F8 00 00 F8 00 F8 | ..88...88....... | Vel/AT: ~56(key?), ~56(key?)
+23:56:29 Scan #3 TX->Conv: [16B] C0 00 F8 00 F8 F8 00 F8 00 F8 38 00 F8 00 F8 C0 | ..........8..... | Vel/AT: ~56(key?)
+23:56:29 Scan #4 TX->Conv: [16B] 00 F8 00 F8 F8 00 F8 00 F8 00 C0 F8 00 F8 38 38 | ..............88 | Idle scan
+23:56:30 Scan #5 TX->Conv: [16B] 00 F8 F8 C0 38 00 F8 38 38 F8 00 F8 C0 38 F8 00 | ....8..88....8.. | Vel/AT: ~56(key?), ~56(key?), ~56(key?)
+23:56:30 Scan #6 TX->Conv: [16B] F8 F8 38 F8 00 F8 00 38 00 F8 38 38 00 F8 C0 F8 | ..8....8..88.... | Vel/AT: ~56(key?), ~56(key?), ~56(key?)
+23:56:30 Partial Scan: [6B] 38 00 F8 F8 F8 38 | 8....8 | Vel/AT: ~56(key?)
+23:56:30 Scan #7 TX->Conv: [16B] 00 F8 00 38 00 F8 38 38 00 F8 00 F8 00 F8 38 F8 | ...8..88......8. | Vel/AT: ~56(key?), ~56(key?)
+23:56:30 Partial Scan: [15B] 00 F8 F8 00 F8 00 F8 38 C0 F8 00 F8 C0 C0 F8 | .......8....... | Vel/AT: ~56(key?)
+23:56:30 Partial Scan: [15B] 00 F8 F8 C0 F8 00 F8 C0 C0 F8 00 F8 38 F8 F8 | ............8.. | Idle scan
+23:56:30 Partial Scan: [5B] 00 F8 C0 38 F8 | ...8. | Idle scan
+23:56:30 Partial Scan: [5B] 00 F8 38 F8 F8 | ..8.. | Idle scan
+23:56:30 Partial Scan: [2B] 3E F6 | >. | Idle scan
+23:56:30 Partial Scan: [3B] 00 3E E6 | .>. | Idle scan
+23:56:31 Partial Scan: [3B] 00 3E CE | .>. | Idle scan
+23:56:31 Partial Scan: [4B] 00 3E CE FE | .>.. | Idle scan
+23:56:32 Partial Scan: [8B] 9E F7 20 D9 FF 20 DE FF | .. .. .. | Vel/AT: ~32(key?)
+23:56:32 Partial Scan: [3B] 20 DF FF |  .. | Idle scan
+23:56:32 Partial Scan: [3B] 20 E0 FF |  .. | Idle scan
+23:56:32 Partial Scan: [6B] A0 DF FF 20 DE FF | ... .. | Idle scan
+23:56:32 Partial Scan: [10B] A0 D8 FF 20 C8 FF 20 F9 20 00 | ... .. . . | Vel/AT: ~32(key?), ~32(key?)
+23:56:32 Partial Scan: [4B] 07 10 E9 FE | .... | Idle scan
+23:56:36 Partial Scan: [1B] CA | . | Idle scan

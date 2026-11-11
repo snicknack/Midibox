@@ -1,0 +1,13 @@
+Timestamp,Event,Note,Name,Vel,AT,Raw
+20:54:33,Note On,108,C8,62,0,20 3e ff
+20:54:34,Note On,108,C8,62,0,20 3e ff 20
+20:54:34,Channel AT,0,N/A,0,7,00 07
+20:54:38,Channel AT,0,N/A,0,7,00 07 29
+20:54:38,Channel AT,0,N/A,0,7,00 07 29
+20:54:38,Channel AT,0,N/A,0,7,00 07 29
+20:54:38,Note On,108,C8,62,0,a0 3e ff
+20:54:38,Channel AT,0,N/A,0,7,00 07 29
+20:54:38,Channel AT,0,N/A,0,7,00 07 29
+20:54:38,Note On,108,C8,62,0,a0 3e ff a0
+20:54:39,Note On,108,C8,62,0,a0 3e ff a0
+20:54:39,Note On,108,C8,62,0,a0 3e ff a0

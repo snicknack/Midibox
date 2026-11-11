@@ -1,0 +1,56 @@
+# -------------------------------------------------------
+# MIDI PROBE SEQUENCE — generic safe messages @31,250 bps
+# Use with uart_hex_console.py  (type: /run midi_probe.seq)
+# -------------------------------------------------------
+
+/kick
+/sleep 100
+
+# ---- 1. Basic Note & Control Tests ----
+90 3C 40          # Note On, Middle C, vel=64
+90 3C 7F          # Note On, Middle C, vel=127
+80 3C 00          # Note Off, Middle C
+B0 07 7F          # Volume CC
+B0 0A 40          # Pan CC
+B0 40 7F          # Sustain On
+B0 40 00          # Sustain Off
+C0 00             # Program Change to 0
+E0 00 40          # Pitch bend center
+/sleep 100
+
+# ---- 2. Real-time & System Common ----
+F8                # Timing Clock
+FA                # Start
+FB                # Continue
+FC                # Stop
+FE                # Active Sensing
+FF                # System Reset
+/sleep 100
+
+# ---- 3. Universal SysEx Inquiries ----
+F0 7E 7F 06 01 F7     # Identity Request
+/sleep 200
+F0 7E 7F 09 01 F7     # GM System On
+/sleep 100
+F0 7E 7F 09 02 F7     # GM System Off
+/sleep 100
+F0 7E 7F 09 03 F7     # GM Mode 3 (optional)
+F0 7E 7F 09 04 F7     # GM Mode 4 (optional)
+/sleep 200
+
+# ---- 4. Diagnostic / Null / Wake Sequences ----
+00
+00 00 00
+AA 01 00
+7E
+F0 00 F7
+FE FE FE
+/sleep 200
+
+# ---- 5. Safety reset ----
+B0 7B 00              # All Notes Off
+B0 7E 00              # Omni Off
+B0 7F 00              # Poly On
+/sleep 500
+
+# End of sequence
