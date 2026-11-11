@@ -185,6 +185,40 @@ rpi-ws281x, adafruit-circuitpython-neopixel / drv2605 / ads1x15 / mpr121,
 Blinka, luma.led-matrix, Pillow. Pip on Bookworm needs
 `--break-system-packages` or a venv. No `dwc2`/gadget overlay is enabled.
 
+## The service: all devices in one process, driving PatchSYS (11 Nov 2026)
+
+`pi/midibox/service/` (deployed to `~/midibox/service/` on the Pi) is the first
+program that runs every device at once, and it makes the box a PatchSYS
+controller. Run it from `~/midibox` with `sudo python3 -m service.midibox_service`;
+`service/README.md` has the flags and the control map. The design:
+
+- **PatchSYS needs no change.** The Pi is a Link client with the same protocol
+  as the iPad remote (`remote_link.py`, port 39276, Bonjour `_patchsys._tcp`):
+  register, claim the writer lease, `set_parameter` with a monotonic sequence
+  (latest value wins per control), actions, and the pushed confirmations.
+  `service/link_client.py` is that client; `tools/link_standin.py` on the Mac
+  is PatchSYS's own server class with a printing sink, for bench tests.
+- **Encoders 1–4 → four of PatchSYS's eight semantic controls**, bank A
+  (Filter Attack, Filter Release, Cutoff, Resonance) or bank B (Balance, Env
+  Amount, Movement, Movement Speed); the Arc1 press toggles banks. Confirmed
+  values come back and move the screen arcs, so the screen follows the app;
+  a control being turned is protected from feedback for 300 ms.
+- **SuperCore = the tempo encoder with ring and haptics, with modes.** TEMPO
+  (cyan ring) sends `tempo`; DEPTH (amber) sends `set_depth`; a long press of
+  Arc1 cycles the mode until the SuperCore's own switch (P14) is proven, after
+  which `press_pin: 14` moves the roles onto it and a long press requests a
+  VARIATION.
+- Wheels stay MIDI pitch bend / CC1 (plus bars and pixels); faders are MIDI
+  CC 7 / 74 unless configured onto a control.
+- Both LED strips run from one `rpi_ws281x` instance (two channels), which is
+  what lets the ring and the wheel pixels live in one process.
+
+Verified on 11 Nov 2026 over SSH with the bench rig: all seven devices open
+together; against the stand-in server every write and action arrived with no
+errors; against PatchSYS Development on the Mac mini the box registered and saw
+the target ONLINE (Serum 2). Physical turning was not tested (nobody at the
+desk). `docs/MIDIBOX_LINK_CLIENT.md` in the PatchSYS repo records the client.
+
 ## Where it paused and the next steps ChatGPT and Stephen had agreed
 1. Fix the garbled press-event prints in `encoders_test.py` (one line per event, line-buffered stdout), confirm Arc1 presses.
 2. Enable presses 2–5 (P5, P8, P11, P14) one at a time, watching for the tempo-encoder oscillation. Root cause unknown; suspects are pull-up/debounce config, noise, or the haptics firing on every event.

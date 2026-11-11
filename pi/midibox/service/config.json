@@ -1,0 +1,67 @@
+{
+  "link": {
+    "enabled": true,
+    "host": "Stephens-Mac-mini-3068.local",
+    "port": 39276,
+    "instance_id": "midibox-pi",
+    "reconnect_s": 3.0,
+    "send_hz": 50
+  },
+  "banks": {
+    "A": ["filter_attack", "filter_release", "brightness", "bite"],
+    "B": ["oscillator_mix", "env_amount", "movement", "movement_speed"]
+  },
+  "encoders": {
+    "enabled": true,
+    "addr": 62,
+    "pairs": [[0, 1], [3, 4], [6, 7], [9, 10], [12, 13]],
+    "poll_hz": 500,
+    "press_pin": 2,
+    "press_button": "arc1",
+    "press_roles": {
+      "arc1": {"short": "bank", "long": "supercore_mode"},
+      "supercore": {"short": "supercore_mode", "long": "variation"}
+    },
+    "long_press_s": 0.7,
+    "step_per_edge": 1,
+    "arc_names": ["uic_t1Arc1", "uic_t1Arc2", "uic_t1Arc3", "uic_t1Arc4"],
+    "tempo_arc_name": "uic_t1Arc5Tempo"
+  },
+  "supercore": {
+    "index": 4,
+    "modes": ["tempo", "depth"],
+    "tempo": {"min": 20, "max": 200, "start": 120, "bpm_per_edge": 1},
+    "depth": {"min": 0, "max": 100, "start": 33, "per_edge": 1},
+    "send_hz": 20
+  },
+  "leds": {
+    "enabled": true,
+    "dma": 10,
+    "wheels": {"pin": 18, "count": 2, "brightness": 255, "strip_type": "WS2811_STRIP_GRB"},
+    "ring": {
+      "pin": 13, "count": 12, "brightness": 12, "strip_type": "SK6812_STRIP_RGBW",
+      "top_offset": 7,
+      "mode_colors": {"tempo": [0, 255, 255, 0], "depth": [255, 140, 0, 0]},
+      "bank_flash": [0, 0, 0, 160]
+    }
+  },
+  "haptics": {"enabled": true, "addr": 90, "motor": "erm", "tick_interval_s": 0.012},
+  "wheels": {
+    "enabled": true,
+    "addr": 72,
+    "cal_path": "config/ads1115_cal.json",
+    "alpha": 0.7,
+    "rate_hz": 60,
+    "pitch_bar": "uic_pitchBar",
+    "mod_bar": "uic_ModBar"
+  },
+  "faders": {
+    "enabled": true,
+    "ports": ["/dev/ttyAMA2", "/dev/ttyAMA3"],
+    "cal_path": "config/calibration.json",
+    "rate_hz": 250,
+    "targets": [{"cc": 7}, {"cc": 74}]
+  },
+  "esp": {"enabled": true, "port": "/dev/serial0", "baud": 115200},
+  "midi": {"enabled": true, "port_name": "Midibox Controls", "channel": 1}
+}
