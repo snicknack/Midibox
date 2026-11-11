@@ -70,6 +70,7 @@ static void btn_event(lv_event_t *e)
 {
     if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
     int i = (int)(intptr_t)lv_event_get_user_data(e);
+    if (i == 6) { ui_patchsys_show(1); sendWidgetValue("ps_open", 1); return; }   // PS on the MIDI page
     if (i == 5) ui_patchsys_show(0);
     sendWidgetValue(BTN_NAME[i], 1);
 }
@@ -184,6 +185,20 @@ void ui_patchsys_screen_init(void)
         lv_obj_center(l);
     }
     ui_patchsys_set_int("ps_status", 0);
+
+    // a way back from the MIDI page: a small PS button in its top-right corner
+    if (ui_MainPage) {
+        lv_obj_t *ps = lv_btn_create(ui_MainPage);
+        lv_obj_set_size(ps, 30, 18);
+        lv_obj_set_pos(ps, 288, 2);
+        style_button(ps);
+        lv_obj_set_style_text_font(ps, &lv_font_montserrat_10, 0);
+        lv_obj_set_style_text_color(ps, C_CYAN, 0);
+        lv_obj_add_event_cb(ps, btn_event, LV_EVENT_CLICKED, (void *)(intptr_t)6);
+        lv_obj_t *l = lv_label_create(ps);
+        lv_label_set_text(l, "PS");
+        lv_obj_center(l);
+    }
 }
 
 void ui_patchsys_show(int show)

@@ -265,6 +265,12 @@ class Service:
             return
         if name == "ps_back":
             return
+        if name == "ps_open":
+            # the MIDI page's PS button: give the page fresh state as it comes up
+            self._push_link_to_screen()
+            self._push_bank_to_screen()
+            self._show_supercore(force=True)
+            return
         if not isinstance(value, (int, float)):
             return
         arc_index = None
