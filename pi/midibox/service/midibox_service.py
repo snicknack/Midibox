@@ -73,6 +73,7 @@ class Service:
         self.touched_at: dict[str, float] = {}
         self.press_down_at = None
         self.bank_flash_color = None
+        self.shown_patchsys_page = False
         self.counts = {"turn": 0, "press": 0, "esp_get": 0, "wheel": 0, "fader": 0}
 
         self.encoders = self.wheels = self.faders = self.leds = self.haptics = self.esp = self.midi = None
@@ -239,13 +240,35 @@ class Service:
         self._write_control(parameter_id, value, index)
 
     def _screen_touch(self, name, value):
+        # the PatchSYS page's buttons
+        if name in ("ps_gen", "ps_vary", "ps_undo"):
+            action = {"ps_gen": "generate", "ps_vary": "variation", "ps_undo": "undo"}[name]
+            if self.link is not None:
+                self.link.action(action)
+            else:
+                LOGGER.info("would send action %s", action)
+            if self.haptics is not None:
+                self.haptics.confirm()
+            return
+        if name == "ps_bank":
+            self._switch_bank()
+            return
+        if name == "ps_mode":
+            self._cycle_supercore_mode()
+            return
+        if name == "ps_back":
+            return
         if not isinstance(value, (int, float)):
             return
+        arc_index = None
         if name in self.arc_names:
-            index = self.arc_names.index(name)
+            arc_index = self.arc_names.index(name)
+        elif name.startswith("ps_arc") and name[6:].isdigit():
+            arc_index = int(name[6:]) - 1
+        if arc_index is not None:
             ids = self.current_ids()
-            if index < len(ids):
-                self._write_control(ids[index], max(0.0, min(1.0, float(value) / 127.0)), index, from_screen=True)
+            if 0 <= arc_index < len(ids):
+                self._write_control(ids[arc_index], max(0.0, min(1.0, float(value) / 127.0)), arc_index, from_screen=True)
         # the tempo arc has no screen event and the bars belong to the wheels
 
     def _write_control(self, parameter_id, value, index, *, from_screen=False):
@@ -257,6 +280,7 @@ class Service:
             LOGGER.info("would set %s (%s) = %.3f", parameter_id, PARAMETER_NAMES[parameter_id], value)
         if not from_screen and self.esp is not None and index < len(self.arc_names):
             self.esp.send(self.arc_names[index], round(value * 127))
+            self.esp.send(f"ps_arc{index + 1}", round(value * 127))
 
     def _press(self, button, pressed):
         self.counts["press"] += 1
@@ -270,17 +294,20 @@ class Service:
         if role == "bank":
             self._switch_bank()
         elif role == "supercore_mode":
-            self.sc_mode = (self.sc_mode + 1) % len(self.sc_modes)
-            if self.haptics is not None:
-                self.haptics.confirm()
-            self._show_supercore(force=True)
-            LOGGER.info("SuperCore mode: %s", self.sc_modes[self.sc_mode])
+            self._cycle_supercore_mode()
         elif role == "variation":
             if self.link is not None:
                 self.link.action("variation")
             if self.haptics is not None:
                 self.haptics.confirm()
             LOGGER.info("variation requested")
+
+    def _cycle_supercore_mode(self):
+        self.sc_mode = (self.sc_mode + 1) % len(self.sc_modes)
+        if self.haptics is not None:
+            self.haptics.confirm()
+        self._show_supercore(force=True)
+        LOGGER.info("SuperCore mode: %s", self.sc_modes[self.sc_mode])
 
     def _switch_bank(self):
         position = self.bank_names.index(self.bank)
@@ -295,14 +322,34 @@ class Service:
     def _push_bank_to_screen(self):
         if self.esp is None:
             return
+        self.esp.send("ps_bank", self.bank_names.index(self.bank))
         for index, parameter_id in enumerate(self.current_ids()):
             if index >= len(self.arc_names):
                 break
+            self.esp.send_text(f"ps_lbl{index + 1}", PARAMETER_NAMES[parameter_id].upper())
             value = self.requested.get(parameter_id)
             if value is None and self.link is not None:
                 value = self.link.values.get(parameter_id)
             if value is not None:
                 self.esp.send(self.arc_names[index], round(value * 127))
+                self.esp.send(f"ps_arc{index + 1}", round(value * 127))
+
+    def _push_link_to_screen(self):
+        """Status, target and sound on the PatchSYS page."""
+        if self.esp is None:
+            return
+        link = self.link
+        if link is None:
+            self.esp.send("ps_status", 0)
+            return
+        status = str(link.status or "")
+        code = 1 if link.online else (2 if "BUSY" in status.upper() else 0)
+        self.esp.send("ps_status", code)
+        if code == 0 and status and status not in ("OFFLINE", "DISCONNECTED"):
+            self.esp.send_text("ps_status_t", status[:12].upper())
+        self.esp.send_text("ps_synth", (link.synth_name or "").upper())
+        sound = link.state.get("sound") if isinstance(link.state, dict) else ""
+        self.esp.send_text("ps_sound", str(sound or ""))
 
     def _supercore_turn(self, delta):
         mode = self.sc_modes[self.sc_mode]
@@ -332,8 +379,15 @@ class Service:
             if force:
                 self.leds.ring_lit = -1
             self.leds.ring(fraction, color)
-        if mode == "tempo" and self.esp is not None:
-            self.esp.send(self.tempo_arc, int(value))
+        if self.esp is not None:
+            if mode == "tempo":
+                self.esp.send(self.tempo_arc, int(value))
+            self.esp.send("ps_sc", int(round(fraction * 100)))
+            self.esp.send_text("ps_scval", str(int(value)))
+            if force:
+                self.esp.send_text("ps_mode", mode.upper())
+                self.esp.send_text("ps_unit", "BPM" if mode == "tempo" else "%")
+                self.esp.send("ps_mode_color", 0 if mode == "tempo" else 1)
 
     def _tick(self):
         """Rate-limited sends of the SuperCore's value to PatchSYS."""
@@ -376,9 +430,13 @@ class Service:
 
     def _on_session(self, link):
         LOGGER.info("PatchSYS: %s %s online=%s", link.status, link.synth_name, link.online)
+        self._push_link_to_screen()
         if link.online:
             self.requested = {}
             self._push_bank_to_screen()
+            if self.esp is not None and not self.shown_patchsys_page:
+                self.shown_patchsys_page = True
+                self.esp.send("ps_show", 1)
 
     def _on_value(self, parameter_id, value):
         """The app's confirmed value replaces ours once the knob has been still for 300 ms."""
@@ -390,8 +448,11 @@ class Service:
             index = ids.index(parameter_id)
             if index < len(self.arc_names):
                 self.esp.send(self.arc_names[index], round(value * 127))
+                self.esp.send(f"ps_arc{index + 1}", round(value * 127))
 
     def _on_state(self, state):
+        if self.esp is not None and ("sound" in state or "status" in state):
+            self._push_link_to_screen()
         tempo = state.get("tempo")
         if isinstance(tempo, (int, float)) and not self.sc_dirty["tempo"] and abs(tempo - self.tempo) >= 1:
             self.tempo = float(tempo)

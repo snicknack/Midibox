@@ -1,6 +1,10 @@
 # ESP32 touchscreen
 
-- `arduino/lvgl_hello_gui_SL_V3_pi_Comms/` — **the sketch that runs on the
+- `arduino/lvgl_hello_gui_SL_V4_patchsys/` — **the next sketch** (11 Nov 2026):
+  V3 plus the PatchSYS page (`ui_patchsys.c`), text labels over serial and the
+  missing arc cases. Compiled; binaries and flashing notes in its `firmware/`.
+  Not flashed yet.
+- `arduino/lvgl_hello_gui_SL_V3_pi_Comms/` — **the sketch running on the
   box** (2 Nov 2025): LVGL 8.3.11 + TFT_eSPI + Adafruit FT6206, SquareLine UI,
   primary serial remapped to GPIO16/17 for the Pi link. Its `lv_conf.h` is
   the one that compiles.

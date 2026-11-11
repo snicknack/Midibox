@@ -215,9 +215,26 @@ controller. Run it from `~/midibox` with `sudo python3 -m service.midibox_servic
 
 Verified on 11 Nov 2026 over SSH with the bench rig: all seven devices open
 together; against the stand-in server every write and action arrived with no
-errors; against PatchSYS Development on the Mac mini the box registered and saw
-the target ONLINE (Serum 2). Physical turning was not tested (nobody at the
-desk). `docs/MIDIBOX_LINK_CLIENT.md` in the PatchSYS repo records the client.
+errors; against PatchSYS Development on the Mac mini the box registered, was
+granted the writer lease and a net-zero nudge of a control and the tempo was
+accepted. Physical turning was not tested (nobody at the desk).
+`docs/MIDIBOX_LINK_CLIENT.md` in the PatchSYS repo records the client.
+
+### The PatchSYS page on the screen (sketch V4, 11 Nov 2026, not yet flashed)
+
+`esp32/arduino/lvgl_hello_gui_SL_V4_patchsys/` is V3 plus a hand-written LVGL
+screen, `ui_patchsys.c`, that the service drives: header with PATCHSYS, the
+target name and a green/amber/red link state; the sound name; a BANK button
+(A/B); four arcs with the value inside and PatchSYS's own control name under
+each (touch-draggable); the SuperCore arc with its mode (TEMPO cyan, DEPTH
+amber) and unit; buttons GEN, VARY, UNDO, BANK, MODE and MIDI (back to the
+MIDI PLAYGROUND page). The serial protocol gains a text form `name=text` for
+labels, `ps_*` int names, the missing `uic_t1Arc3/4/5Tempo` cases, and the
+page answers with `{"get":"ps_…"}` lines the service maps to Link actions.
+Design mock: https://claude.ai/artifact/NME21KU2AU5ZoqhwvSFodA. It compiled on
+the MacBook (92 % of flash); binaries and flashing notes are in its
+`firmware/`. The ESP32 was on nobody's USB port, so it still runs V3, which
+answers the new names with `err unknown` and is otherwise unaffected.
 
 ## Where it paused and the next steps ChatGPT and Stephen had agreed
 1. Fix the garbled press-event prints in `encoders_test.py` (one line per event, line-buffered stdout), confirm Arc1 presses.

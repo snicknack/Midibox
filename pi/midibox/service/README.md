@@ -38,6 +38,14 @@ PatchSYS's confirmed values come back over the Link and move the arcs, so the
 screen follows the app after a Generate or an Undo. A value we are turning is
 protected for 300 ms so feedback never fights the hand.
 
+With the V4 sketch flashed (`esp32/arduino/lvgl_hello_gui_SL_V4_patchsys`), the
+service also drives the PatchSYS page: link state, target and sound names,
+the four control names of the current bank, the SuperCore mode and value, and
+it brings that page up when PatchSYS first comes online. The page's GEN, VARY
+and UNDO buttons become Link actions; BANK and MODE do what the encoder
+presses do. On the V3 sketch these extra messages are answered with
+`{"err":"unknown"}` and ignored.
+
 If the SuperCore's own push switch (SX1509 P14) proves stable, set
 `"press_pin": 14, "press_button": "supercore"` in `config.json`: then a short
 press cycles the mode and a long press asks PatchSYS for a VARIATION, and the

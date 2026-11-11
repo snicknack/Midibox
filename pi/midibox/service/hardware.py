@@ -272,6 +272,15 @@ class Esp:
         except Exception as error:
             LOGGER.debug("esp write failed: %s", error)
 
+    def send_text(self, name, text):
+        """The V4 sketch's text form, name=text, for the PatchSYS page's labels."""
+        clean = "".join(ch for ch in str(text) if 32 <= ord(ch) < 127 and ch not in "=:")[:40]
+        try:
+            self.serial.write(f"{name}={clean}\n".encode("ascii"))
+            self.sent += 1
+        except Exception as error:
+            LOGGER.debug("esp write failed: %s", error)
+
     def poll(self):
         """-> list of dicts for JSON lines from the screen (get/set/err), newest last."""
         try:
